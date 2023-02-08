@@ -386,7 +386,8 @@ where
         bytemuck::cast_slice(&adapter.mix),
     );
     hal.debug("< compute_polynomial");
-    // debug!("Result = {result:?}");
+    #[cfg(not(target_os = "zkvm"))]
+    log::debug!("Result = {result:?}");
 
     // Now generate the check polynomial
     // TODO: This currently treats the extension degree as hardcoded at 4, with
@@ -415,14 +416,16 @@ where
     }
     let three = H::Elem::from_u64(3);
     check *= (H::ExtElem::from_subfield(&three) * z).pow(size) - H::ExtElem::ONE;
-    // debug!("Check = {check:?}");
+    #[cfg(not(target_os = "zkvm"))]
+    log::debug!("Check = {check:?}");
     if check != result {
         return Err(VerificationError::InvalidProof);
     }
 
     // Set the mix mix value, pseudorandom value used for FRI batching
     let mix = H::ExtElem::random(&mut iop);
-    // debug!("mix = {mix:?}");
+    #[cfg(not(target_os = "zkvm"))]
+    log::debug!("mix = {mix:?}");
 
     // Make the mixed U polynomials.
     // combo_u has one element for each column with the same set of taps.

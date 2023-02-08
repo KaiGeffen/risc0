@@ -28,6 +28,10 @@ use risc0_zkp::{
     INV_RATE,
 };
 
+use crate::{
+    GLOBAL_MIX, GLOBAL_OUT, REGISTER_GROUP_ACCUM, REGISTER_GROUP_CODE, REGISTER_GROUP_DATA,
+};
+
 const METAL_LIB: &[u8] = include_bytes!(env!("RV32IM_METAL_PATH"));
 
 #[derive(Debug)]
@@ -51,11 +55,8 @@ impl EvalCheck<MetalHal> for MetalEvalCheck {
     fn eval_check(
         &self,
         check: &MetalBuffer<BabyBearElem>,
-        code: &MetalBuffer<BabyBearElem>,
-        data: &MetalBuffer<BabyBearElem>,
-        accum: &MetalBuffer<BabyBearElem>,
-        mix: &MetalBuffer<BabyBearElem>,
-        out: &MetalBuffer<BabyBearElem>,
+        groups: &[&MetalBuffer<BabyBearElem>],
+        globals: &[&MetalBuffer<BabyBearElem>],
         poly_mix: BabyBearExtElem,
         po2: usize,
         steps: usize,
@@ -75,11 +76,11 @@ impl EvalCheck<MetalHal> for MetalEvalCheck {
         );
         let buffers = &[
             check.as_arg(),
-            code.as_arg(),
-            data.as_arg(),
-            accum.as_arg(),
-            mix.as_arg(),
-            out.as_arg(),
+            groups[REGISTER_GROUP_CODE].as_arg(),
+            groups[REGISTER_GROUP_DATA].as_arg(),
+            groups[REGISTER_GROUP_ACCUM].as_arg(),
+            globals[GLOBAL_MIX].as_arg(),
+            globals[GLOBAL_OUT].as_arg(),
             poly_mix.as_arg(),
             rou.as_arg(),
             po2.as_arg(),
@@ -101,7 +102,7 @@ mod tests {
 
     // TODO: figure out a better way to test this.
     #[test]
-    #[ignore]
+    // #[ignore]
     fn eval_check() {
         // The number of cycles, choose a number that doesn't make tests take too long.
         const PO2: usize = 4;
