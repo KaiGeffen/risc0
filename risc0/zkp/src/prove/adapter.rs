@@ -19,7 +19,7 @@ use std::sync::{
 
 use rand::thread_rng;
 use rayon::prelude::*;
-use risc0_core::field::{Elem, Field};
+use risc0_core::field::{Elem, ExtElem, Field};
 
 use crate::{
     adapter::{CircuitDef, CircuitStepContext, CircuitStepHandler, REGISTER_GROUP_ACCUM},
@@ -83,7 +83,8 @@ where
             .exec
             .circuit
             .get_taps()
-            .group_size(REGISTER_GROUP_ACCUM);
+            .group_size(REGISTER_GROUP_ACCUM)
+            * F::ExtElem::EXT_SIZE;
         self.accum.resize(self.steps * accum_size, F::Elem::INVALID);
         let mut args: &mut [&mut [F::Elem]] = &mut [
             &mut self.exec.code,

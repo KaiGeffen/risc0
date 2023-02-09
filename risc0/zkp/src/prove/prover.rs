@@ -88,8 +88,8 @@ where
 
     /// Commits a given buffer to the IOP; the values must not subsequently
     /// change.
-    pub fn commit_group(&mut self, tap_group_index: usize, buf: H::BufferElem) {
-        let group_size = self.taps.group_size(tap_group_index);
+    pub fn commit_group(&mut self, tap_group_index: usize, buf: H::BufferElem, elem_size: usize) {
+        let group_size = self.taps.group_size(tap_group_index) * elem_size;
         assert_eq!(buf.size() % group_size, 0);
         assert_eq!(buf.size() / group_size, self.cycles);
         assert!(

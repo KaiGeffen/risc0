@@ -117,8 +117,9 @@ pub trait TapsProvider {
 }
 
 pub trait CircuitInfo {
-    const OUTPUT_SIZE: usize;
+    const ACCUM_SIZE: usize;
     const MIX_SIZE: usize;
+    const OUTPUT_SIZE: usize;
 }
 
 pub trait CircuitDef<F: Field>:
@@ -138,6 +139,7 @@ pub enum PolyExtStep {
     Const(u32),
     Get(usize),
     GetGlobal(Arg, usize),
+    GetGlobalExt(Arg, usize),
     Add(Var, Var),
     Sub(Var, Var),
     Mul(Var, Var),
@@ -165,6 +167,14 @@ impl PolyExtStep {
             }
             PolyExtStep::GetGlobal(base, offset) => {
                 fp_vars.push(F::ExtElem::from_subfield(&args[*base][*offset]));
+            }
+            PolyExtStep::GetGlobalExt(base, offset) => {
+                let slice: Vec<F::Elem> = args[*base]
+                    [*offset * F::ExtElem::EXT_SIZE..*offset * (F::ExtElem::EXT_SIZE + 1)]
+                    .iter()
+                    .cloned()
+                    .collect();
+                fp_vars.push(F::ExtElem::from_subelems(slice));
             }
             PolyExtStep::Add(x1, x2) => {
                 fp_vars.push(fp_vars[*x1] + fp_vars[*x2]);

@@ -309,7 +309,7 @@ where
     // Get taps and compute sizes
     let code_size = taps.group_size(REGISTER_GROUP_CODE);
     let data_size = taps.group_size(REGISTER_GROUP_DATA);
-    let accum_size = taps.group_size(REGISTER_GROUP_ACCUM);
+    let accum_size = taps.group_size(REGISTER_GROUP_ACCUM) * H::ExtElem::EXT_SIZE;
 
     // Get merkle root for the code merkle tree.
     // The code merkle tree contains the control instructions for the zkVM.

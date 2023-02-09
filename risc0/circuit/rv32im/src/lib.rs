@@ -131,7 +131,7 @@ pub mod testutil {
             let taps = circuit.get_taps();
             let code_size = taps.group_size(REGISTER_GROUP_CODE);
             let data_size = taps.group_size(REGISTER_GROUP_DATA);
-            let accum_size = taps.group_size(REGISTER_GROUP_ACCUM);
+            let accum_size = taps.group_size(REGISTER_GROUP_ACCUM) * BabyBearExtElem::EXT_SIZE;
             let code = random_fps(&mut rng, code_size * domain);
             let data = random_fps(&mut rng, data_size * domain);
             let accum = random_fps(&mut rng, accum_size * domain);

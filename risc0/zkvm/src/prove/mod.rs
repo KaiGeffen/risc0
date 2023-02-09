@@ -24,7 +24,10 @@ use std::{collections::HashMap, fmt::Debug, io::Write, rc::Rc};
 
 use anyhow::{bail, Result};
 use risc0_circuit_rv32im::{REGISTER_GROUP_ACCUM, REGISTER_GROUP_CODE, REGISTER_GROUP_DATA};
-use risc0_core::field::baby_bear::{BabyBearElem, BabyBearExtElem};
+use risc0_core::field::{
+    baby_bear::{BabyBearElem, BabyBearExtElem},
+    ExtElem,
+};
 use risc0_zkp::{
     adapter::TapsProvider,
     core::sha::Digest,
@@ -233,15 +236,18 @@ impl<'a> Prover<'a> {
             prover.commit_group(
                 REGISTER_GROUP_CODE,
                 hal.copy_from_elem("code", adapter.get_code()),
+                1, // elem_size
             );
             prover.commit_group(
                 REGISTER_GROUP_DATA,
                 hal.copy_from_elem("data", adapter.get_data()),
+                1, // elem_size
             );
             adapter.accumulate(prover.iop());
             prover.commit_group(
                 REGISTER_GROUP_ACCUM,
                 hal.copy_from_elem("accum", adapter.get_accum()),
+                H::ExtElem::EXT_SIZE,
             );
 
             let mix = hal.copy_from_elem("mix", adapter.get_mix());
