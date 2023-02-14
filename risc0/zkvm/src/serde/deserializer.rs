@@ -523,4 +523,13 @@ mod tests {
         };
         assert_eq!(expected, from_slice(&words).unwrap());
     }
+
+    #[test]
+    fn test_byte_slice() {
+        let d: &[u8] = &hex::decode("b922f47c00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001".to_string()).unwrap();
+        let encoded = crate::serde::to_vec(&d).unwrap();
+        let decoded: &[u8] = from_slice(&encoded).unwrap();
+        println!("here: {:?}", hex::encode(decoded.clone()));
+        assert_eq!(d, decoded);
+    }
 }
