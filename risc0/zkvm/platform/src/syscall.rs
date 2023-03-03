@@ -24,13 +24,6 @@ pub mod ecall {
     pub const SHA: u32 = 3;
 }
 
-pub mod nr {
-    pub const SYS_PANIC: u32 = 0;
-    pub const SYS_LOG: u32 = 1;
-    pub const SYS_IO: u32 = 2;
-    pub const SYS_CYCLE_COUNT: u32 = 3;
-}
-
 pub mod reg_abi {
     pub const REG_ZERO: usize = 0; // zero constant
     pub const REG_RA: usize = 1; // return address
@@ -84,47 +77,107 @@ const fn round_up(a: u32, b: u32) -> u32 {
     div_ceil(a, b) * b
 }
 
+// TODO: We can probably use ffi::CStr::from_bytes_with_nul once it's
+// const-stablized instead of rolling our own structure:
+// https://github.com/rust-lang/rust/issues/101719
+
+/// A NUL-terminated name of a syscall with static lifetime.
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct SyscallName(*const u8);
+
+/// Construct a SyscallName declaration at compile time.
+///
+/// ```
+/// declare_syscall!(MY_SYSTEM_CALL);
+/// ```
+#[macro_export]
+macro_rules! declare_syscall {
+    ($(#[$meta:meta])*
+     $vis:vis $name:ident) => {
+            $(#[$meta])*
+            $vis const $name: $crate::syscall::SyscallName
+                = unsafe{
+                    $crate::syscall::SyscallName::from_bytes_with_nul(concat!(stringify!($name), "\0").as_ptr())
+                };
+    };
+}
+
+pub mod nr {
+    declare_syscall!(pub SYS_PANIC);
+    declare_syscall!(pub SYS_LOG);
+    declare_syscall!(pub SYS_CYCLE_COUNT);
+    declare_syscall!(pub SYS_INITIAL_INPUT);
+    declare_syscall!(pub SYS_JOURNAL);
+    declare_syscall!(pub SYS_STDERR);
+    declare_syscall!(pub SYS_STDOUT);
+}
+
+impl SyscallName {
+    pub const unsafe fn from_bytes_with_nul(ptr: *const u8) -> Self {
+        Self(ptr)
+    }
+
+    #[allow(dead_code)]
+    fn as_ptr(&self) -> *const u8 {
+        self.0
+    }
+
+    pub fn as_str(&self) -> &str {
+        core::str::from_utf8(unsafe { core::ffi::CStr::from_ptr(self.as_ptr().cast()).to_bytes() })
+            .unwrap()
+    }
+}
+
 #[inline(always)]
-pub unsafe fn sys_panic(msg_ptr: *const u8, msg_len: usize) -> ! {
+pub unsafe fn sys_software(syscall_name: SyscallName) -> (u32, u32) {
     #[cfg(target_os = "zkvm")]
     {
+        let a0: u32;
+        let a1: u32;
         asm!(
             "ecall",
             in("t0") ecall::SOFTWARE,
-            out("a0") _,
-            inout("a1") 0 => _,
-            in("a2") nr::SYS_PANIC,
-            in("a3") msg_ptr,
-            in("a4") msg_len,
+            inout("a0") 0 => a0,
+            inout("a1") 0 => a1,
+            in("a2") syscall_name.as_ptr(),
         );
-        unreachable!();
+        (a0, a1)
     }
     #[cfg(not(target_os = "zkvm"))]
     unimplemented!()
 }
 
 #[inline(always)]
-pub unsafe fn sys_log(msg_ptr: *const u8, msg_len: usize) {
+pub unsafe fn sys_software_send(
+    syscall_name: SyscallName,
+    send_buf: *const u8,
+    send_len: usize,
+) -> (u32, u32) {
     #[cfg(target_os = "zkvm")]
-    asm!(
-        "ecall",
-        in("t0") ecall::SOFTWARE,
-        out("a0") _,
-        inout("a1") 0 => _,
-        in("a2") nr::SYS_LOG,
-        in("a3") msg_ptr,
-        in("a4") msg_len,
-    );
+    {
+        let a0: u32;
+        let a1: u32;
+        asm!(
+            "ecall",
+            in("t0") ecall::SOFTWARE,
+            inout("a0") 0 => a0,
+            inout("a1") 0 => a1,
+            in("a2") syscall_name.as_ptr(),
+            in("a3") send_buf,
+            in("a4") send_len,
+        );
+        (a0, a1)
+    }
     #[cfg(not(target_os = "zkvm"))]
     unimplemented!()
 }
 
-pub unsafe fn sys_io(
+#[inline(always)]
+pub unsafe fn sys_software_recv(
+    syscall_name: SyscallName,
     recv_buf: *mut u32,
-    recv_words: usize,
-    send_buf: *const u8,
-    send_bytes: usize,
-    channel: u32,
+    recv_len: usize,
 ) -> (u32, u32) {
     #[cfg(target_os = "zkvm")]
     {
@@ -134,11 +187,8 @@ pub unsafe fn sys_io(
             "ecall",
             in("t0") ecall::SOFTWARE,
             inout("a0") recv_buf => a0,
-            inout("a1") recv_words => a1,
-            in("a2") nr::SYS_IO,
-            in("a3") send_buf,
-            in("a4") send_bytes,
-            in("a5") channel,
+            inout("a1") recv_len => a1,
+            in("a2") syscall_name.as_ptr(),
         );
         (a0, a1)
     }
@@ -147,18 +197,27 @@ pub unsafe fn sys_io(
 }
 
 #[inline(always)]
-pub unsafe fn sys_cycle_count() -> usize {
+pub unsafe fn sys_software_sendrecv(
+    syscall_name: SyscallName,
+    recv_buf: *mut u32,
+    recv_len: usize,
+    send_buf: *const u8,
+    send_len: usize,
+) -> (u32, u32) {
     #[cfg(target_os = "zkvm")]
     {
-        let cycle: usize;
+        let a0: u32;
+        let a1: u32;
         asm!(
             "ecall",
             in("t0") ecall::SOFTWARE,
-            out("a0")  cycle,
-            inout("a1") 0 => _,
-            in("a2") nr::SYS_CYCLE_COUNT,
+            inout("a0") recv_buf => a0,
+            inout("a1") recv_len => a1,
+            in("a2") syscall_name.as_ptr(),
+            in("a3") send_buf,
+            in("a4") send_len,
         );
-        cycle
+        (a0, a1)
     }
     #[cfg(not(target_os = "zkvm"))]
     unimplemented!()

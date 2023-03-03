@@ -23,7 +23,7 @@ use risc0_zeroio::deserialize::Deserialize;
 use risc0_zkp::core::sha::{testutil::test_sha_impl, Digest, Sha256};
 use risc0_zkvm::guest::{env, memory_barrier, sha};
 use risc0_zkvm_methods::multi_test::{MultiTestSpec, MultiTestSpecRef};
-use risc0_zkvm_platform::io::SENDRECV_CHANNEL_INITIAL_INPUT;
+use risc0_zkvm_platform::{declare_syscall,syscall::nr::SYS_INITIAL_INPUT};
 
 risc0_zkvm::entry!(main);
 
@@ -39,8 +39,10 @@ fn profile_test_func2() {
     unsafe { asm!("nop") }
 }
 
+declare_syscall!(MULTI_TEST_SENDRECV);
+
 pub fn main() {
-    let initial_bytes = env::send_recv_slice::<u8, u8>(SENDRECV_CHANNEL_INITIAL_INPUT, &[]);
+    let initial_bytes = env::recv_slice::<u8>(SYS_INITIAL_INPUT);
     let impl_select = MultiTestSpec::deserialize_from(bytemuck::cast_slice(initial_bytes));
     match impl_select {
         MultiTestSpecRef::DoNothing(_) => {}
@@ -104,7 +106,7 @@ pub fn main() {
 
             for _ in 0..sendrecv.count() {
                 let host_data =
-                    env::send_recv_slice::<u8, u8>(sendrecv.channel_id(), &input[..input_len]);
+                    env::send_recv_slice::<u8, u8>(MULTI_TEST_SENDRECV, &input[..input_len]);
 
                 input = bytemuck::cast_slice(host_data);
                 input_len = input.len();

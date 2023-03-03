@@ -106,7 +106,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // registering a send_recv callback to communicate vector oracle data from
     // the Merkle tree.
     let prover_opts = ProverOpts::default().with_sendrecv_callback(
-        VECTOR_ORACLE_CHANNEL,
+        VECTOR_ORACLE_CHANNEL.as_str(),
         img_merkle_tree.vector_oracle_callback(),
     );
     let mut prover = Prover::new_with_opts(IMAGE_CROP_ELF, IMAGE_CROP_ID, prover_opts)?;

@@ -21,12 +21,16 @@ use merkle_light::{
 };
 #[cfg(target_os = "zkvm")]
 use risc0_zkvm::guest;
-use risc0_zkvm::sha::{Digest, Impl, Sha256};
+use risc0_zkvm::{
+    declare_channel,
+    sha::{Digest, Impl, Sha256},
+};
 use serde::{Deserialize, Serialize};
 
-/// RISC0 channel identifier for providing oracle access to a vector to the
-/// guest from the host.
-pub const VECTOR_ORACLE_CHANNEL: u32 = 0x09ac1e00;
+declare_channel!(
+    /// RISC0 channel identifier for providing oracle access to a vector to the
+    /// guest from the host.
+    pub VECTOR_ORACLE_CHANNEL);
 
 /// Merkle tree for use as a vector commitment over elements of the specified
 /// type.

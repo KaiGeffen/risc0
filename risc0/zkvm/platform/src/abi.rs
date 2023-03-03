@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{io, memory, syscall};
+use crate::{memory, syscall};
 
 // Number of words remaining in the heap that haven't yet been allocated.
 static mut HEAP_WORDS_REMAINING: usize = memory::HEAP.len_words();
@@ -35,25 +35,13 @@ pub fn zkvm_abi_alloc_words(nwords: usize) -> *mut u32 {
 #[no_mangle]
 pub fn zkvm_abi_write_stdout(buf: &[u8]) {
     unsafe {
-        syscall::sys_io(
-            &mut [] as _,
-            0,
-            buf.as_ptr(),
-            buf.len(),
-            io::SENDRECV_CHANNEL_STDOUT,
-        );
+        syscall::sys_software_send(syscall::nr::SYS_STDOUT, buf.as_ptr(), buf.len());
     }
 }
 
 #[no_mangle]
 pub fn zkvm_abi_write_stderr(buf: &[u8]) {
     unsafe {
-        syscall::sys_io(
-            &mut [] as _,
-            0,
-            buf.as_ptr(),
-            buf.len(),
-            io::SENDRECV_CHANNEL_STDERR,
-        );
+        syscall::sys_software_send(syscall::nr::SYS_STDERR, buf.as_ptr(), buf.len());
     }
 }
